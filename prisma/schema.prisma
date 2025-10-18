@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id             Int       @id @default(autoincrement())
+  nombres        String
+  apellido_p     String
+  apellido_m     String
+  correo         String    @unique
+  pais_celular   String?
+  celular        String?
+  contraseña    String
+  f_nacimiento   DateTime?
+  tipo_documento String
+  nro_documento  String
+  avatar         String?
+  genero         String?
+  activo         Boolean   @default(true)
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  // Relaciones
+  roles           UsuarioRol[]
+  preferencias    Preferencia?
+  notificaciones  Notificacion[]
+  dispositivos    Dispositivo[]
+  listaDeseos     ListaDeseos?
+  consentimientos UsuarioConsentimiento[]
+
+  @@map("usuarios") // nombre real en la base de datos
+}
+
+model Rol {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique
+  descripcion String
+  activo      Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relaciones
+  usuarios UsuarioRol[]
+  permisos RolPermiso[]
+
+  @@map("roles")
+}
+
+model Permiso {
+  id          Int      @id @default(autoincrement())
+  nombre      String
+  descripcion String
+  activo      Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  roles RolPermiso[]
+
+  @@map("permisos")
+}
+
+model Consentimiento {
+  id            Int       @id @default(autoincrement())
+  nombre        String
+  descripcion   String?
+  obligatorio   Boolean   @default(false)
+  vigente_desde DateTime  @default(now())
+  vigente_hasta DateTime?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  activo        Boolean   @default(true)
+
+  usuarios UsuarioConsentimiento[]
+
+  @@map("consentimientos")
+}
+
+model UsuarioRol {
+  usuario_id Int
+  rol_id     Int
+  created_at DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+  rol     Rol     @relation(fields: [rol_id], references: [id])
+
+  @@id([usuario_id, rol_id])
+  @@map("usuario_rol")
+}
+
+model RolPermiso {
+  rol_id     Int
+  permiso_id Int
+  created_at DateTime @default(now())
+
+  rol     Rol     @relation(fields: [rol_id], references: [id])
+  permiso Permiso @relation(fields: [permiso_id], references: [id])
+
+  @@id([rol_id, permiso_id])
+  @@map("rol_permiso")
+}
+
+model Preferencia {
+  id                Int      @id @default(autoincrement())
+  usuario_id        Int      @unique
+  tema              String? // Ej: "claro", "oscuro"
+  idioma            String? // Ej: "es", "en"
+  notificaciones_on Boolean  @default(true)
+  marketing_emails  Boolean  @default(false)
+  privacidad_nivel  String? // Ej: "básico", "avanzado"
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@map("preferencias")
+}
+
+model Notificacion {
+  id          Int      @id @default(autoincrement())
+  usuario_id  Int
+  titulo      String
+  mensaje     String
+  leida       Boolean  @default(false)
+  tipo        String? // Ej: "alerta", "sistema", "promoción"
+  fecha_envio DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@map("notificaciones")
+}
+
+model Dispositivo {
+  id            Int      @id @default(autoincrement())
+  usuario_id    Int
+  tipo          String? // Ej: "móvil", "desktop", "tablet"
+  sistema       String? // Ej: "Android", "Windows", "iOS"
+  navegador     String? // Ej: "Chrome", "Safari"
+  direccion_ip  String?
+  ultimo_acceso DateTime @default(now())
+  estado        String? // Ej: "activo", "inactivo"
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@map("dispositivos")
+}
+
+model ListaDeseos {
+  id          Int      @id @default(autoincrement())
+  usuario_id  Int      @unique
+  nombre      String   @default("Lista principal")
+  descripcion String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  usuario Usuario           @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  items   ItemListaDeseos[]
+
+  @@map("listas_deseos")
+}
+
+model ItemListaDeseos {
+  id          Int      @id @default(autoincrement())
+  lista_id    Int
+  producto_id Int // Referencia al producto (en otra tabla)
+  created_at  DateTime @default(now())
+
+  lista ListaDeseos @relation(fields: [lista_id], references: [id], onDelete: Cascade)
+
+  @@map("items_lista_deseos")
+}
+
+model UsuarioConsentimiento {
+  id                Int       @id @default(autoincrement())
+  usuario_id        Int
+  consentimiento_id Int
+  aceptado          Boolean
+  created_at        DateTime? @default(now())
+
+  usuario        Usuario        @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  consentimiento Consentimiento @relation(fields: [consentimiento_id], references: [id], onDelete: Cascade)
+
+  @@unique([usuario_id, consentimiento_id])
+  @@map("usuarios_consentimientos")
+}
