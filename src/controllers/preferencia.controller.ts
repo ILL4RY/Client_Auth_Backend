@@ -3,7 +3,7 @@ import  prisma  from "../config/prisma";
 import { CrearPreferenciaDTO } from "../interfaces/preferencia.interface";
 
 /* =========================================================
-   🧩 Crear preferencia
+   Crear preferencia
    ========================================================= */
 export const crearPreferencia = async (
   req: Request<{}, {}, CrearPreferenciaDTO>,
@@ -60,7 +60,7 @@ export const crearPreferencia = async (
 };
 
 /* =========================================================
-   📋 Listar todas las preferencias
+   Listar todas las preferencias
    ========================================================= */
 export const listarPreferencias = async (_req: Request, res: Response) => {
   try {
@@ -81,7 +81,7 @@ export const listarPreferencias = async (_req: Request, res: Response) => {
 };
 
 /* =========================================================
-   🔍 Obtener preferencia por ID
+   Obtener preferencia por ID
    ========================================================= */
 export const obtenerPreferenciaPorId = async (req: Request, res: Response) => {
   try {
@@ -108,7 +108,7 @@ export const obtenerPreferenciaPorId = async (req: Request, res: Response) => {
 };
 
 /* =========================================================
-   ✏️ Actualizar preferencia
+   Actualizar preferencia
    ========================================================= */
 export const actualizarPreferencia = async (req: Request, res: Response) => {
   try {
@@ -140,7 +140,7 @@ export const actualizarPreferencia = async (req: Request, res: Response) => {
 };
 
 /* =========================================================
-   🗑️ Eliminar preferencia
+   Eliminar preferencia
    ========================================================= */
 export const eliminarPreferencia = async (req: Request, res: Response) => {
   try {
