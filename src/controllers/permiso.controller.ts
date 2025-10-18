@@ -3,7 +3,7 @@ import prisma from "../config/prisma";
 import { CrearPermisoDTO } from "../interfaces/permiso.interface";
 
 /* =========================================================
-   📋 Listar todos los permisos
+   Listar todos los permisos
    ========================================================= */
 export const listarPermisos = async (req: Request, res: Response) => {
   try {
@@ -18,7 +18,7 @@ export const listarPermisos = async (req: Request, res: Response) => {
 };
 
 /* =========================================================
-   🔍 Obtener un permiso por ID
+   Obtener un permiso por ID
    ========================================================= */
 export const obtenerPermisoPorId = async (req: Request, res: Response) => {
   try {
@@ -39,7 +39,7 @@ export const obtenerPermisoPorId = async (req: Request, res: Response) => {
 };
 
 /* =========================================================
-   🆕 Crear nuevo permiso
+   Crear nuevo permiso
    ========================================================= */
 export const crearPermiso = async (
   req: Request<{}, {}, CrearPermisoDTO>,
@@ -78,7 +78,7 @@ export const crearPermiso = async (
 };
 
 /* =========================================================
-   ✏️ Actualizar permiso
+   Actualizar permiso
    ========================================================= */
 export const actualizarPermiso = async (req: Request, res: Response) => {
   try {
@@ -101,7 +101,7 @@ export const actualizarPermiso = async (req: Request, res: Response) => {
 };
 
 /* =========================================================
-   🗑️ Eliminar permiso
+   Eliminar permiso
    ========================================================= */
 export const eliminarPermiso = async (req: Request, res: Response) => {
   try {

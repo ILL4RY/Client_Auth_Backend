@@ -3,7 +3,7 @@ import prisma from "../config/prisma";
 import { CrearConsentimientoDTO } from "../interfaces/consentimiento.interface";
 
 /* =========================================================
-   🧩 Crear consentimiento
+   Crear consentimiento
    ========================================================= */
 export const crearConsentimiento = async (
   req: Request<{}, {}, CrearConsentimientoDTO>,
@@ -51,7 +51,7 @@ export const crearConsentimiento = async (
 };
 
 /* =========================================================
-   📋 Listar todos los consentimientos
+   Listar todos los consentimientos
    ========================================================= */
 export const listarConsentimientos = async (_req: Request, res: Response) => {
   try {
@@ -67,7 +67,7 @@ export const listarConsentimientos = async (_req: Request, res: Response) => {
 };
 
 /* =========================================================
-   🔍 Obtener consentimiento por ID
+   Obtener consentimiento por ID
    ========================================================= */
 export const obtenerConsentimientoPorId = async (req: Request, res: Response) => {
   try {
@@ -89,7 +89,7 @@ export const obtenerConsentimientoPorId = async (req: Request, res: Response) =>
 };
 
 /* =========================================================
-   ✏️ Actualizar consentimiento
+   Actualizar consentimiento
    ========================================================= */
 export const actualizarConsentimiento = async (req: Request, res: Response) => {
   try {
@@ -121,7 +121,7 @@ export const actualizarConsentimiento = async (req: Request, res: Response) => {
 };
 
 /* =========================================================
-   🗑️ Eliminar consentimiento
+   Eliminar consentimiento
    ========================================================= */
 export const eliminarConsentimiento = async (req: Request, res: Response) => {
   try {

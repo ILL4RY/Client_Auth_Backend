@@ -3,7 +3,7 @@ import prisma from "../config/prisma";
 import { CrearRolDTO } from "../interfaces/rol.interface";
 
 /* =========================================================
-   ➕ Crear Rol
+   Crear Rol
    ========================================================= */
 export const crearRol = async (
   req: Request<{}, {}, CrearRolDTO>,
@@ -45,7 +45,7 @@ export const crearRol = async (
 };
 
 /* =========================================================
-   📋 Listar Roles
+   Listar Roles
    ========================================================= */
 export const listarRoles = async (_req: Request, res: Response) => {
   try {
@@ -64,7 +64,7 @@ export const listarRoles = async (_req: Request, res: Response) => {
 };
 
 /* =========================================================
-   🔍 Obtener Rol por ID
+   Obtener Rol por ID
    ========================================================= */
 export const obtenerRolPorId = async (req: Request, res: Response) => {
   try {
@@ -90,7 +90,7 @@ export const obtenerRolPorId = async (req: Request, res: Response) => {
 };
 
 /* =========================================================
-   ✏️ Actualizar Rol
+   Actualizar Rol
    ========================================================= */
 export const actualizarRol = async (
   req: Request<{ id: string }, {}, Partial<CrearRolDTO>>,
@@ -135,7 +135,7 @@ export const actualizarRol = async (
 };
 
 /* =========================================================
-   🗑️ Eliminar (Desactivar) Rol
+   Eliminar (Desactivar) Rol
    ========================================================= */
 export const eliminarRol = async (req: Request, res: Response) => {
   try {

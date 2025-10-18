@@ -4,7 +4,7 @@ import { CrearUsuarioDTO } from "../interfaces/usuario.interface";
 import { hashPassword } from "../utils/hash";
 
 /* =========================================================
-   📌 Crear usuario
+   Crear usuario
    ========================================================= */
 export const crearUsuario = async (
   req: Request<{}, {}, CrearUsuarioDTO & { origen?: string }>,
@@ -24,7 +24,7 @@ export const crearUsuario = async (
       nro_documento,
       avatar,
       genero,
-      origen, // 👈 agregado: "cliente" o "admin"
+      origen, // agregado: "cliente" o "admin"
     } = req.body;
 
     // Validar campos obligatorios
@@ -46,7 +46,7 @@ export const crearUsuario = async (
       return res.status(409).json({ error: "El correo ya está registrado" });
     }
 
-    // 🔹 Determinar el rol según el origen
+    // Determinar el rol según el origen
     const rolAsignado = origen === "admin" ? "Administrador" : "Cliente";
     const rol = await prisma.rol.findFirst({ where: { nombre: rolAsignado } });
 
@@ -63,7 +63,7 @@ export const crearUsuario = async (
     // Hashear contraseña
     const contraseñaHasheada = await hashPassword(contraseña);
 
-    // ✅ Ejecutar todo en una transacción
+    // Ejecutar todo en una transacción
     const nuevoUsuario = await prisma.$transaction(async (tx) => {
       // Crear usuario
       const usuario = await tx.usuario.create({
@@ -132,7 +132,7 @@ export const crearUsuario = async (
 };
 
 /* =========================================================
-   📋 Listar todos los usuarios
+   Listar todos los usuarios
    ========================================================= */
 export const listarUsuarios = async (_req: Request, res: Response) => {
   try {
@@ -162,7 +162,7 @@ export const listarUsuarios = async (_req: Request, res: Response) => {
 };
 
 /* =========================================================
-   🔍 Obtener usuario por ID
+   Obtener usuario por ID
    ========================================================= */
 export const obtenerUsuarioPorId = async (req: Request, res: Response) => {
   try {
@@ -213,7 +213,7 @@ export const obtenerUsuarioPorId = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Usuario no encontrado" });
     }
 
-    // 🔹 Transformar roles para que se vean más limpios en la respuesta
+    // Transformar roles para que se vean más limpios en la respuesta
     const roles_usuario = usuario.roles.map((ur) => ur.rol);
     const { roles, ...resto } = usuario;
 
@@ -228,7 +228,7 @@ export const obtenerUsuarioPorId = async (req: Request, res: Response) => {
 };
 
 /* =========================================================
-   ✏️ Actualizar usuario
+   Actualizar usuario
    ========================================================= */
 export const actualizarUsuario = async (req: Request, res: Response) => {
   try {
@@ -248,7 +248,7 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
       genero,
     } = req.body;
 
-    // 🧩 Validar si el usuario existe antes de actualizar
+    // Validar si el usuario existe antes de actualizar
     const usuarioExistente = await prisma.usuario.findUnique({
       where: { id: Number(id) },
     });
@@ -257,12 +257,12 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Usuario no encontrado" });
     }
 
-    // 🔐 Si se incluye una nueva contraseña, se hashea
+    // Si se incluye una nueva contraseña, se hashea
     const contraseñaHasheada = contraseña
       ? await hashPassword(contraseña)
       : undefined;
 
-    // 📨 Actualizar solo campos válidos
+    // Actualizar solo campos válidos
     const usuarioActualizado = await prisma.usuario.update({
       where: { id: Number(id) },
       data: {
@@ -298,7 +298,7 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
 };
 
 /* =========================================================
-   🗑️ Eliminar usuario
+   Eliminar usuario
    ========================================================= */
 export const eliminarUsuario = async (req: Request, res: Response) => {
   try {
