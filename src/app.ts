@@ -13,6 +13,7 @@ import usuarioRoutes from "./routes/usuario.routes";
 import rolRoutes from "./routes/rol.routes";
 import permisoRoutes from "./routes/permiso.routes";
 import authRouter from "./routes/auth.routes";
+import direccionRoutes from "./routes/direccion.routes";
 
 const app = express();
 const PgSession = connectPgSimple(session);
@@ -51,6 +52,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/roles", rolRoutes);
 app.use("/api/permisos", permisoRoutes);
+app.use("/api/direcciones", direccionRoutes);
 
 // Ruta base
 app.get("/", (req, res) => {

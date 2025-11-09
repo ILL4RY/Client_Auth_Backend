@@ -32,8 +32,9 @@ model Usuario {
   dispositivos    Dispositivo[]
   listaDeseos     ListaDeseos?
   consentimientos UsuarioConsentimiento[]
+  direcciones     Direccion[]
 
-  @@map("usuarios") // nombre real en la base de datos
+  @@map("usuarios")
 }
 
 model Rol {
@@ -186,4 +187,23 @@ model UsuarioConsentimiento {
 
   @@unique([usuario_id, consentimiento_id])
   @@map("usuarios_consentimientos")
+}
+
+model Direccion {
+  id            Int     @id @default(autoincrement())
+  calle         String
+  ciudad        String
+  estado        String?
+  pais          String
+  codigo_postal String?
+  isDefault     Boolean @default(false)
+
+  // Relación con el usuario
+  usuario_id Int
+  usuario    Usuario @relation(fields: [usuario_id], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("direcciones")
 }
