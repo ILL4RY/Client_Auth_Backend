@@ -137,7 +137,7 @@ export const actualizarRol = async (
 /* =========================================================
    Eliminar (Desactivar) Rol
    ========================================================= */
-export const eliminarRol = async (req: Request, res: Response) => {
+export const desactivarRol = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 

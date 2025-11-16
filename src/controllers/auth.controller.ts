@@ -113,7 +113,6 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { correo, contraseña } = req.body;
 
-    // Validar campos requeridos
     if (!correo || !contraseña) {
       return res.status(400).json({
         success: false,
@@ -121,10 +120,7 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // Buscar usuario
-    const user = await prisma.usuario.findUnique({
-      where: { correo }
-    });
+    const user = await prisma.usuario.findUnique({ where: { correo } });
 
     if (!user) {
       return res.status(401).json({
@@ -133,8 +129,8 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // Verificar contraseña
     const isMatch = await bcrypt.compare(contraseña, user.contraseña);
+
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -142,7 +138,6 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // Verificar si el usuario está activo
     if (!user.activo) {
       return res.status(403).json({
         success: false,
@@ -150,37 +145,42 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // Iniciar sesión
+    // ---------------------------------------------------
+    // GUARDAR SESIÓN CORRECTAMENTE
+    // ---------------------------------------------------
     req.session.userId = user.id;
     req.session.isAuth = true;
 
-    // Registrar dispositivo
-    const dispositivoData: any = {
-      usuario_id: user.id,
-      tipo: req.useragent?.isMobile ? 'móvil' : 'desktop',
-      sistema: req.useragent?.platform || 'desconocido',
-      navegador: req.useragent?.browser || 'desconocido',
-      direccion_ip: req.ip || null,
-      estado: 'activo'
-    };
+    req.session.save(async (err) => {
+      if (err) {
+        console.error("Error guardando sesión:", err);
+        return res.status(500).json({
+          success: false,
+          message: "No se pudo guardar la sesión"
+        });
+      }
 
-    // Asegurarse de que los campos opcionales sean null en lugar de undefined
-    if (!dispositivoData.sistema) dispositivoData.sistema = null;
-    if (!dispositivoData.navegador) dispositivoData.navegador = null;
-    if (!dispositivoData.direccion_ip) dispositivoData.direccion_ip = null;
+      // Registrar dispositivo
+      const dispositivoData: any = {
+        usuario_id: user.id,
+        tipo: req.useragent?.isMobile ? 'móvil' : 'desktop',
+        sistema: req.useragent?.platform || null,
+        navegador: req.useragent?.browser || null,
+        direccion_ip: req.ip || null,
+        estado: 'activo'
+      };
 
-    await prisma.dispositivo.create({
-      data: dispositivoData
+      await prisma.dispositivo.create({ data: dispositivoData });
+
+      const { contraseña: _, ...userWithoutPassword } = user;
+
+      return res.status(200).json({
+        success: true,
+        user: userWithoutPassword,
+        message: 'Inicio de sesión exitoso'
+      });
     });
 
-    // No devolver la contraseña en la respuesta
-    const { contraseña: _, ...userWithoutPassword } = user;
-
-    res.status(200).json({
-      success: true,
-      user: userWithoutPassword,
-      message: 'Inicio de sesión exitoso'
-    });
   } catch (error) {
     console.error('Error en inicio de sesión:', error);
     res.status(500).json({

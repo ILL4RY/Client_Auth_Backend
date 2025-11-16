@@ -6,11 +6,9 @@ console.log(process.env.DATABASE_URL);
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  }
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
 });
 
 pool.connect()
-    .then(() => console.log('PostgreSQL connected successfully'))
-    .catch(err => console.error('PostgreSQL connection error: ', err));
+  .then(() => console.log("✅ PostgreSQL connected successfully"))
+  .catch(err => console.error("❌ PostgreSQL connection error:", err));

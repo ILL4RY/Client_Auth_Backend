@@ -1,5 +1,11 @@
 import { Router } from 'express';
-import { register, login, logout, checkAuth, getCurrentUser } from '../controllers/auth.controller';
+import { 
+    register, 
+    login, 
+    logout, 
+    checkAuth, 
+    getCurrentUser 
+} from '../controllers/auth.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 
 export const authRouter = Router();

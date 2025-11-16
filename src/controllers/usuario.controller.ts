@@ -47,7 +47,7 @@ export const crearUsuario = async (
     }
 
     // Determinar el rol según el origen
-    const rolAsignado = origen === "admin" ? "Administrador" : "Cliente";
+    const rolAsignado = origen === "Admin" ? "Administrador" : "Cliente";
     const rol = await prisma.rol.findFirst({ where: { nombre: rolAsignado } });
 
     if (!rol) {
@@ -151,10 +151,30 @@ export const listarUsuarios = async (_req: Request, res: Response) => {
         avatar: true,
         genero: true,
         created_at: true,
+
+        // 🔽 Incluimos los roles del usuario
+        roles: {
+          select: {
+            rol: {
+              select: {
+                id: true,
+                nombre: true,
+                descripcion: true,
+                activo: true,
+              },
+            },
+          },
+        },
       },
     });
 
-    res.status(200).json(usuarios);
+    // 🔄 Mapeamos el resultado para simplificar la respuesta (roles como array de objetos)
+    const usuariosConRoles = usuarios.map(usuario => ({
+      ...usuario,
+      roles: usuario.roles.map((ur: any) => ur.rol),
+    }));
+
+    res.status(200).json(usuariosConRoles);
   } catch (error) {
     console.error("Error al listar usuarios:", error);
     res.status(500).json({ error: "Error interno del servidor" });
@@ -184,8 +204,6 @@ export const obtenerUsuarioPorId = async (req: Request, res: Response) => {
         avatar: true,
         genero: true,
         created_at: true,
-
-        // 🔹 Incluir relaciones
         preferencias: {
           select: {
             tema: true,
@@ -206,6 +224,18 @@ export const obtenerUsuarioPorId = async (req: Request, res: Response) => {
             },
           },
         },
+        // 🔹 Incluir las direcciones
+        direcciones: {
+          select: {
+            id: true,
+            calle: true,
+            ciudad: true,
+            estado: true,
+            pais: true,
+            codigo_postal: true,
+            isDefault: true,
+          },
+        },
       },
     });
 
@@ -213,7 +243,6 @@ export const obtenerUsuarioPorId = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Usuario no encontrado" });
     }
 
-    // Transformar roles para que se vean más limpios en la respuesta
     const roles_usuario = usuario.roles.map((ur: any) => ur.rol);
     const { roles, ...resto } = usuario;
 
