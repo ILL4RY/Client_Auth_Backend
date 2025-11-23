@@ -28,10 +28,7 @@ app.use(cors({
 */
 
 app.use(cors({
-  origin: [
-    'http://localhost:5173',   // Vite
-    "http://localhost:57224",  // npx serve para login-test
-  ],
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
 }));
 
@@ -43,7 +40,6 @@ app.use(
     store: new PgSession({
       pool: pool,
       tableName: "session",
-      createTableIfMissing: true,
     }),
     secret: process.env.SECRET_KEY!,
     resave: false,
