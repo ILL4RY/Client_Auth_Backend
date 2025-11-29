@@ -6,6 +6,7 @@ import {
     checkAuth, 
     getCurrentUser 
 } from '../controllers/auth.controller';
+import rolRouter from './rol.routes';
 import { authMiddleware } from '../middlewares/auth.middleware';
 
 export const authRouter = Router();
@@ -19,7 +20,9 @@ authRouter.get('/check', checkAuth);
 
 // Rutas protegidas (requieren autenticación)
 authRouter.use(authMiddleware);
-authRouter.post('/logout', authMiddleware, logout);
+authRouter.post('/logout', logout);
 authRouter.get('/me', getCurrentUser);
+
+authRouter.use('/roles', rolRouter);
 
 export default authRouter;

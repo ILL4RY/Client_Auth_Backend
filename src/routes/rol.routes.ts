@@ -6,6 +6,7 @@ import {
   obtenerRolPorId,
   actualizarRol,
   desactivarRol,
+  asignarRolUsuario
 } from "../controllers/rol.controller";
 
 const router = Router();
@@ -15,5 +16,7 @@ router.get("/", listarRoles);
 router.get("/:id", obtenerRolPorId);
 router.put("/:id", actualizarRol);
 router.delete("/:id", desactivarRol);
+
+router.post("/asignar", asignarRolUsuario);
 
 export default router;

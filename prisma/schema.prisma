@@ -5,6 +5,8 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+
+  ssl = true
 }
 
 model Usuario {
@@ -22,6 +24,7 @@ model Usuario {
   activo          Boolean                 @default(true)
   avatar          String?
   genero          String?
+  rolInt          Int                    @default(1) // 1 = user, 2 = admin
   created_at      DateTime                @default(now())
   updated_at      DateTime                @updatedAt
 

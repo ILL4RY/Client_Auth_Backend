@@ -21,7 +21,8 @@ export const register = async (req: Request, res: Response) => {
       correo, 
       contraseña, 
       tipo_documento, 
-      nro_documento 
+      nro_documento,
+      rolInt = 1 // Default to 1 (user) if not provided
     } = req.body;
 
     // Validar campos requeridos
@@ -48,48 +49,27 @@ export const register = async (req: Request, res: Response) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(contraseña, salt);
 
-    // Usar una transacción para asegurar la integridad de los datos
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Crear el usuario
-      const user = await tx.usuario.create({
-        data: {
-          nombres,
-          apellido_p,
-          apellido_m: apellido_m || '',
-          correo,
-          contraseña: hashedPassword,
-          tipo_documento,
-          nro_documento,
-          activo: true
-        }
-      });
-
-      // 2. Verificar que el rol exista
-      const roleExists = await tx.rol.findUnique({
-        where: { id: 2 }
-      });
-
-      if (!roleExists) {
-        throw new Error('El rol de usuario no está configurado correctamente');
+    // Crear el usuario directamente con el rol
+    const newUser = await prisma.usuario.create({
+      data: {
+        nombres,
+        apellido_p,
+        apellido_m,
+        correo,
+        contraseña: hashedPassword,
+        tipo_documento,
+        nro_documento,
+        rolInt, // This will use the provided value or default to 1
+        activo: true
       }
-
-      // 3. Asignar rol de usuario
-      await tx.usuarioRol.create({
-        data: {
-          usuario_id: user.id,
-          rol_id: 2 // Rol de cliente
-        }
-      });
-
-      return user;
     });
 
     // Iniciar sesión solo si todo salió bien
-    req.session.userId = result.id;
+    req.session.userId = newUser.id;
     req.session.isAuth = true;
 
     // No devolver la contraseña en la respuesta
-    const { contraseña: _, ...userWithoutPassword } = result;
+    const { contraseña: _, ...userWithoutPassword } = newUser;
 
     return res.status(201).json({
       success: true,
