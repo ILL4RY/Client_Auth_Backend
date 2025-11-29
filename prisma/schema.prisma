@@ -33,6 +33,7 @@ model Usuario {
   roles           UsuarioRol[]
   consentimientos UsuarioConsentimiento[]
   direcciones     Direccion[]
+  passwordResets  PasswordReset[] @relation("UsuarioPasswordResets")
 
   @@map("usuarios")
 }
@@ -214,4 +215,19 @@ model Direccion {
   updated_at     DateTime  @updatedAt
 
   @@map("direcciones")
+}
+
+model PasswordReset {
+  id          Int       @id @default(autoincrement())
+  usuario_id  Int
+  token       String    @unique
+  expires_at  DateTime
+  used_at     DateTime?
+  created_at  DateTime  @default(now())
+  ip_origen   String?
+  user_agent  String?
+
+  usuario     Usuario   @relation("UsuarioPasswordResets", fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@map("password_resets")
 }

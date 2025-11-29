@@ -169,7 +169,7 @@ export const listarUsuarios = async (_req: Request, res: Response) => {
     });
 
     // 🔄 Mapeamos el resultado para simplificar la respuesta (roles como array de objetos)
-    const usuariosConRoles = usuarios.map(usuario => ({
+    const usuariosConRoles = usuarios.map((usuario: any) => ({
       ...usuario,
       roles: usuario.roles.map((ur: any) => ur.rol),
     }));

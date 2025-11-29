@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
+import { sendPasswordResetEmail } from "../utils/email";
+import { generateResetToken, getResetExpiration } from "../utils/resetToken";
 
 const prisma = new PrismaClient();
 
@@ -285,6 +287,185 @@ export const getCurrentUser = async (req: Request, res: Response) => {
       success: false,
       message: 'Error al obtener información del usuario',
       error: error instanceof Error ? error.message : 'Error desconocido'
+    });
+  }
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  const { correo } = req.body;
+
+  if (!correo) {
+    return res.status(400).json({
+      success: false,
+      message: 'El correo es obligatorio'
+    });
+  }
+
+  const genericMessage = 'Si el correo es válido, enviaremos un enlace de recuperación.';
+
+  try {
+    const user = await prisma.usuario.findUnique({
+      where: { correo }
+    });
+
+    if (!user || !user.activo) {
+      return res.status(200).json({
+        success: true,
+        message: genericMessage
+      });
+    }
+
+    const token = generateResetToken();
+    const expires_at = getResetExpiration();
+
+    await prisma.$transaction(async (tx) => {
+      await tx.passwordReset.updateMany({
+        where: {
+          usuario_id: user.id,
+          used_at: null,
+          expires_at: { gt: new Date() }
+        },
+        data: {
+          used_at: new Date()
+        }
+      });
+
+      await tx.passwordReset.create({
+        data: {
+          usuario_id: user.id,
+          token,
+          expires_at,
+          ip_origen: req.ip || null,
+          user_agent: (req.headers["user-agent"] as string) || null
+        }
+      });
+    });
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetUrl = `${frontendUrl}/reset?token=${token}`;
+
+    await sendPasswordResetEmail({
+      to: user.correo,
+      resetUrl
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: genericMessage
+    });
+  } catch (error) {
+    console.error('Error al generar recuperación:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'No se pudo procesar la solicitud'
+    });
+  }
+};
+
+export const validateResetToken = async (req: Request, res: Response) => {
+  const { token } = req.query;
+
+  if (!token || typeof token !== 'string') {
+    return res.status(400).json({
+      success: false,
+      message: 'Token requerido'
+    });
+  }
+
+  try {
+    const resetRow = await prisma.passwordReset.findUnique({
+      where: { token }
+    });
+
+    if (!resetRow || resetRow.used_at) {
+      return res.status(400).json({
+        success: false,
+        message: 'Enlace inválido'
+      });
+    }
+
+    if (resetRow.expires_at < new Date()) {
+      return res.status(410).json({
+        success: false,
+        message: 'Enlace expirado'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      valid: true
+    });
+  } catch (error) {
+    console.error('Error al validar token:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'No se pudo validar el enlace'
+    });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  const { token, nuevaContrasena } = req.body;
+
+  if (!token || !nuevaContrasena) {
+    return res.status(400).json({
+      success: false,
+      message: 'Token y nueva contraseña son obligatorios'
+    });
+  }
+
+  try {
+    const resetRow = await prisma.passwordReset.findUnique({
+      where: { token }
+    });
+
+    if (!resetRow || resetRow.used_at) {
+      return res.status(400).json({
+        success: false,
+        message: 'Enlace inválido'
+      });
+    }
+
+    if (resetRow.expires_at < new Date()) {
+      return res.status(410).json({
+        success: false,
+        message: 'Enlace expirado'
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(nuevaContrasena, salt);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.usuario.update({
+        where: { id: resetRow.usuario_id },
+        data: { ['contrase\u00f1a']: hashedPassword } as any
+      });
+
+      await tx.passwordReset.update({
+        where: { id: resetRow.id },
+        data: { used_at: new Date() }
+      });
+
+      await tx.passwordReset.updateMany({
+        where: {
+          usuario_id: resetRow.usuario_id,
+          used_at: null,
+          expires_at: { gt: new Date() }
+        },
+        data: { used_at: new Date() }
+      });
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Contraseña actualizada correctamente'
+    });
+  } catch (error) {
+    console.error('Error al reestablecer contraseña:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'No se pudo reestablecer la contraseña'
     });
   }
 };
