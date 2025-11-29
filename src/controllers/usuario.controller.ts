@@ -348,4 +348,43 @@ export const eliminarUsuario = async (req: Request, res: Response) => {
   }
 };
 
+/* =========================================================
+   Exportar datos del usuario (perfil + preferencias + consentimientos)
+   ========================================================= */
+export const exportarDatosUsuario = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const usuarioId = Number(id);
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      include: {
+        preferencias: true,
+        consentimientos: {
+          include: { consentimiento: true },
+        },
+        direcciones: true,
+        roles: {
+          include: { rol: true },
+        },
+      },
+    });
+
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    // Excluir contraseña
+    const { ["contrase\u00f1a"]: _omit, ...usuarioSinPassword } = usuario as any;
+
+    res.status(200).json({
+      exportado_en: new Date().toISOString(),
+      usuario: usuarioSinPassword,
+    });
+  } catch (error) {
+    console.error("Error al exportar datos de usuario:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+};
+
 

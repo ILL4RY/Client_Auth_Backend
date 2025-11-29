@@ -7,7 +7,7 @@ import { generateResetToken, getResetExpiration } from "../utils/resetToken";
 const prisma = new PrismaClient();
 
 // Interfaz para el usuario en la sesión
-declare module 'express-session' {
+declare module "express-session" {
   interface SessionData {
     userId?: number;
     isAuth?: boolean;
@@ -16,42 +16,37 @@ declare module 'express-session' {
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { 
-      nombres, 
-      apellido_p, 
-      apellido_m, 
-      correo, 
-      contraseña, 
-      tipo_documento, 
+    const {
+      nombres,
+      apellido_p,
+      apellido_m,
+      correo,
+      contraseña,
+      tipo_documento,
       nro_documento,
-      rolInt = 1 // Default to 1 (user) if not provided
-    } = req.body;
+    } = req.body as any;
 
-    // Validar campos requeridos
     if (!nombres || !apellido_p || !correo || !contraseña || !tipo_documento || !nro_documento) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Todos los campos son obligatorios' 
+      return res.status(400).json({
+        success: false,
+        message: "Todos los campos son obligatorios",
       });
     }
 
-    // Verificar si el correo ya existe
     const existingUser = await prisma.usuario.findUnique({
-      where: { correo }
+      where: { correo },
     });
 
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'El correo ya está registrado'
+        message: "El correo ya está registrado",
       });
     }
 
-    // Encriptar contraseña
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(contraseña, salt);
 
-    // Crear el usuario directamente con el rol
     const newUser = await prisma.usuario.create({
       data: {
         nombres,
@@ -61,44 +56,53 @@ export const register = async (req: Request, res: Response) => {
         contraseña: hashedPassword,
         tipo_documento,
         nro_documento,
-        rolInt, // This will use the provided value or default to 1
-        activo: true
-      }
+        activo: true,
+      },
     });
 
-    // Iniciar sesión solo si todo salió bien
+    // Asignar rol por defecto (cliente id 2) si existe
+    try {
+      await prisma.usuarioRol.create({
+        data: {
+          usuario_id: newUser.id,
+          rol_id: 2,
+        },
+      });
+    } catch (e) {
+      console.warn("No se pudo asignar rol por defecto al usuario", e);
+    }
+
     req.session.userId = newUser.id;
     req.session.isAuth = true;
 
-    // No devolver la contraseña en la respuesta
-    const { contraseña: _, ...userWithoutPassword } = newUser;
+    const { contraseña: _omit, ...userWithoutPassword } = newUser as any;
 
     return res.status(201).json({
       success: true,
       user: userWithoutPassword,
-      message: 'Usuario registrado exitosamente'
+      message: "Usuario registrado exitosamente",
     });
   } catch (error: unknown) {
-    console.error('Error en registro:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-    const statusCode = errorMessage.includes('rol de usuario no está configurado') ? 500 : 400;
-    
+    console.error("Error en registro:", error);
+    const errorMessage = error instanceof Error ? error.message : "Error desconocido";
+    const statusCode = errorMessage.includes("rol de usuario no está configurado") ? 500 : 400;
+
     return res.status(statusCode).json({
       success: false,
-      message: 'Error al registrar el usuario',
-      error: errorMessage
+      message: "Error al registrar el usuario",
+      error: errorMessage,
     });
   }
 };
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const { correo, contraseña } = req.body;
+    const { correo, contraseña } = req.body as any;
 
     if (!correo || !contraseña) {
       return res.status(400).json({
         success: false,
-        message: 'Correo y contraseña son requeridos'
+        message: "Correo y contraseña son requeridos",
       });
     }
 
@@ -107,7 +111,7 @@ export const login = async (req: Request, res: Response) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Credenciales inválidas'
+        message: "Credenciales inválidas",
       });
     }
 
@@ -116,20 +120,17 @@ export const login = async (req: Request, res: Response) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Credenciales inválidas'
+        message: "Credenciales inválidas",
       });
     }
 
     if (!user.activo) {
       return res.status(403).json({
         success: false,
-        message: 'Cuenta desactivada. Por favor, contacte al administrador.'
+        message: "Cuenta desactivada. Por favor, contacte al administrador.",
       });
     }
 
-    // ---------------------------------------------------
-    // GUARDAR SESIÓN CORRECTAMENTE
-    // ---------------------------------------------------
     req.session.userId = user.id;
     req.session.isAuth = true;
 
@@ -138,67 +139,63 @@ export const login = async (req: Request, res: Response) => {
         console.error("Error guardando sesión:", err);
         return res.status(500).json({
           success: false,
-          message: "No se pudo guardar la sesión"
+          message: "No se pudo guardar la sesión",
         });
       }
 
-      // Registrar dispositivo
       const dispositivoData: any = {
         usuario_id: user.id,
-        tipo: req.useragent?.isMobile ? 'móvil' : 'desktop',
-        sistema: req.useragent?.platform || null,
-        navegador: req.useragent?.browser || null,
+        tipo: (req as any).useragent?.isMobile ? "móvil" : "desktop",
+        sistema: (req as any).useragent?.platform || null,
+        navegador: (req as any).useragent?.browser || null,
         direccion_ip: req.ip || null,
-        estado: 'activo'
+        estado: "activo",
       };
 
       await prisma.dispositivo.create({ data: dispositivoData });
 
-      const { contraseña: _, ...userWithoutPassword } = user;
+      const { contraseña: _omitPass, ...userWithoutPassword } = user as any;
 
       return res.status(200).json({
         success: true,
         user: userWithoutPassword,
-        message: 'Inicio de sesión exitoso'
+        message: "Inicio de sesión exitoso",
       });
     });
-
   } catch (error) {
-    console.error('Error en inicio de sesión:', error);
+    console.error("Error en inicio de sesión:", error);
     res.status(500).json({
       success: false,
-      message: 'Error al iniciar sesión',
-      error: error instanceof Error ? error.message : 'Error desconocido'
+      message: "Error al iniciar sesión",
+      error: error instanceof Error ? error.message : "Error desconocido",
     });
   }
 };
 
 export const logout = (req: Request, res: Response) => {
   try {
-    // Destruir la sesión
     req.session.destroy((err) => {
       if (err) {
-        console.error('Error al cerrar sesión:', err);
+        console.error("Error al cerrar sesión:", err);
         return res.status(500).json({
           success: false,
-          message: 'Error al cerrar sesión'
+          message: "Error al cerrar sesión",
         });
       }
-      
-      // Limpiar la cookie de sesión
-      res.clearCookie('connect.sid');
-      
+
+      res.clearCookie("connect.sid");
+
       res.status(200).json({
         success: true,
-        message: 'Sesión cerrada correctamente'
+        message: "Sesión cerrada correctamente",
       });
     });
   } catch (error) {
-    console.error('Error en cierre de sesión:', error);
+    console.error("Error en cierre de sesión:", error);
     res.status(500).json({
       success: false,
-      message: 'Error al cerrar sesión',
-      error: error instanceof Error ? error.message : 'Error desconocido'
+      message: "Error al cerrar sesión",
+      error: error instanceof Error ? error.message : "Error desconocido",
     });
   }
 };
@@ -209,20 +206,20 @@ export const checkAuth = (req: Request, res: Response) => {
       return res.status(200).json({
         success: true,
         isAuthenticated: true,
-        userId: req.session.userId
+        userId: req.session.userId,
       });
     }
-    
+
     res.status(200).json({
       success: true,
-      isAuthenticated: false
+      isAuthenticated: false,
     });
   } catch (error) {
-    console.error('Error al verificar autenticación:', error);
+    console.error("Error al verificar autenticación:", error);
     res.status(500).json({
       success: false,
-      message: 'Error al verificar autenticación',
-      error: error instanceof Error ? error.message : 'Error desconocido'
+      message: "Error al verificar autenticación",
+      error: error instanceof Error ? error.message : "Error desconocido",
     });
   }
 };
@@ -232,7 +229,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
     if (!req.session.isAuth || !req.session.userId) {
       return res.status(401).json({
         success: false,
-        message: 'No autenticado'
+        message: "No autenticado",
       });
     }
 
@@ -260,58 +257,59 @@ export const getCurrentUser = async (req: Request, res: Response) => {
               include: {
                 permisos: {
                   include: {
-                    permiso: true
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                    permiso: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'Usuario no encontrado'
+        message: "Usuario no encontrado",
       });
     }
 
     res.status(200).json({
       success: true,
-      user
+      user,
     });
   } catch (error) {
-    console.error('Error al obtener usuario actual:', error);
+    console.error("Error al obtener usuario actual:", error);
     res.status(500).json({
       success: false,
-      message: 'Error al obtener información del usuario',
-      error: error instanceof Error ? error.message : 'Error desconocido'
+      message: "Error al obtener información del usuario",
+      error: error instanceof Error ? error.message : "Error desconocido",
     });
   }
 };
 
+// Flujo de recuperación de contraseña
 export const forgotPassword = async (req: Request, res: Response) => {
   const { correo } = req.body;
 
   if (!correo) {
     return res.status(400).json({
       success: false,
-      message: 'El correo es obligatorio'
+      message: "El correo es obligatorio",
     });
   }
 
-  const genericMessage = 'Si el correo es válido, enviaremos un enlace de recuperación.';
+  const genericMessage = "Si el correo es válido, enviaremos un enlace de recuperación.";
 
   try {
     const user = await prisma.usuario.findUnique({
-      where: { correo }
+      where: { correo },
     });
 
     if (!user || !user.activo) {
       return res.status(200).json({
         success: true,
-        message: genericMessage
+        message: genericMessage,
       });
     }
 
@@ -323,11 +321,11 @@ export const forgotPassword = async (req: Request, res: Response) => {
         where: {
           usuario_id: user.id,
           used_at: null,
-          expires_at: { gt: new Date() }
+          expires_at: { gt: new Date() },
         },
         data: {
-          used_at: new Date()
-        }
+          used_at: new Date(),
+        },
       });
 
       await tx.passwordReset.create({
@@ -336,28 +334,28 @@ export const forgotPassword = async (req: Request, res: Response) => {
           token,
           expires_at,
           ip_origen: req.ip || null,
-          user_agent: (req.headers["user-agent"] as string) || null
-        }
+          user_agent: (req.headers["user-agent"] as string) || null,
+        },
       });
     });
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const resetUrl = `${frontendUrl}/reset?token=${token}`;
 
     await sendPasswordResetEmail({
       to: user.correo,
-      resetUrl
+      resetUrl,
     });
 
     return res.status(200).json({
       success: true,
-      message: genericMessage
+      message: genericMessage,
     });
   } catch (error) {
-    console.error('Error al generar recuperación:', error);
+    console.error("Error al generar recuperación:", error);
     return res.status(500).json({
       success: false,
-      message: 'No se pudo procesar la solicitud'
+      message: "No se pudo procesar la solicitud",
     });
   }
 };
@@ -365,71 +363,71 @@ export const forgotPassword = async (req: Request, res: Response) => {
 export const validateResetToken = async (req: Request, res: Response) => {
   const { token } = req.query;
 
-  if (!token || typeof token !== 'string') {
+  if (!token || typeof token !== "string") {
     return res.status(400).json({
       success: false,
-      message: 'Token requerido'
+      message: "Token requerido",
     });
   }
 
   try {
     const resetRow = await prisma.passwordReset.findUnique({
-      where: { token }
+      where: { token },
     });
 
     if (!resetRow || resetRow.used_at) {
       return res.status(400).json({
         success: false,
-        message: 'Enlace inválido'
+        message: "Enlace inválido",
       });
     }
 
     if (resetRow.expires_at < new Date()) {
       return res.status(410).json({
         success: false,
-        message: 'Enlace expirado'
+        message: "Enlace expirado",
       });
     }
 
     return res.status(200).json({
       success: true,
-      valid: true
+      valid: true,
     });
   } catch (error) {
-    console.error('Error al validar token:', error);
+    console.error("Error al validar token:", error);
     return res.status(500).json({
       success: false,
-      message: 'No se pudo validar el enlace'
+      message: "No se pudo validar el enlace",
     });
   }
 };
 
 export const resetPassword = async (req: Request, res: Response) => {
-  const { token, nuevaContrasena } = req.body;
+  const { token, nuevaContrasena } = req.body as any;
 
   if (!token || !nuevaContrasena) {
     return res.status(400).json({
       success: false,
-      message: 'Token y nueva contraseña son obligatorios'
+      message: "Token y nueva contraseña son obligatorios",
     });
   }
 
   try {
     const resetRow = await prisma.passwordReset.findUnique({
-      where: { token }
+      where: { token },
     });
 
     if (!resetRow || resetRow.used_at) {
       return res.status(400).json({
         success: false,
-        message: 'Enlace inválido'
+        message: "Enlace inválido",
       });
     }
 
     if (resetRow.expires_at < new Date()) {
       return res.status(410).json({
         success: false,
-        message: 'Enlace expirado'
+        message: "Enlace expirado",
       });
     }
 
@@ -439,33 +437,33 @@ export const resetPassword = async (req: Request, res: Response) => {
     await prisma.$transaction(async (tx) => {
       await tx.usuario.update({
         where: { id: resetRow.usuario_id },
-        data: { ['contrase\u00f1a']: hashedPassword } as any
+        data: { contraseña: hashedPassword },
       });
 
       await tx.passwordReset.update({
         where: { id: resetRow.id },
-        data: { used_at: new Date() }
+        data: { used_at: new Date() },
       });
 
       await tx.passwordReset.updateMany({
         where: {
           usuario_id: resetRow.usuario_id,
           used_at: null,
-          expires_at: { gt: new Date() }
+          expires_at: { gt: new Date() },
         },
-        data: { used_at: new Date() }
+        data: { used_at: new Date() },
       });
     });
 
     return res.status(200).json({
       success: true,
-      message: 'Contraseña actualizada correctamente'
+      message: "Contraseña actualizada correctamente",
     });
   } catch (error) {
-    console.error('Error al reestablecer contraseña:', error);
+    console.error("Error al reestablecer contraseña:", error);
     return res.status(500).json({
       success: false,
-      message: 'No se pudo reestablecer la contraseña'
+      message: "No se pudo reestablecer la contraseña",
     });
   }
 };

@@ -160,3 +160,74 @@ export const eliminarPreferencia = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Error interno del servidor" });
   }
 };
+
+/* =========================================================
+   Obtener preferencia por usuario (by usuario_id)
+   ========================================================= */
+export const obtenerPreferenciaPorUsuario = async (req: Request, res: Response) => {
+  try {
+    const { usuarioId } = req.params;
+    const preferencia = await prisma.preferencia.findUnique({
+      where: { usuario_id: Number(usuarioId) },
+    });
+
+    if (!preferencia) {
+      return res.status(404).json({ error: "Preferencia no encontrada" });
+    }
+
+    res.status(200).json(preferencia);
+  } catch (error) {
+    console.error("Error al obtener preferencia por usuario:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+};
+
+/* =========================================================
+   Crear/actualizar preferencia por usuario (upsert)
+   ========================================================= */
+export const upsertPreferenciaPorUsuario = async (req: Request, res: Response) => {
+  try {
+    const { usuarioId } = req.params;
+    const {
+      tema,
+      idioma,
+      notificaciones_on,
+      marketing_emails,
+      privacidad_nivel,
+    } = req.body;
+
+    const usuario_id = Number(usuarioId);
+
+    const usuarioExiste = await prisma.usuario.findUnique({
+      where: { id: usuario_id },
+    });
+
+    if (!usuarioExiste) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    const preferencia = await prisma.preferencia.upsert({
+      where: { usuario_id },
+      update: {
+        tema: tema ?? undefined,
+        idioma: idioma ?? undefined,
+        notificaciones_on: notificaciones_on ?? undefined,
+        marketing_emails: marketing_emails ?? undefined,
+        privacidad_nivel: privacidad_nivel ?? undefined,
+      },
+      create: {
+        usuario_id,
+        tema: tema ?? null,
+        idioma: idioma ?? null,
+        notificaciones_on: notificaciones_on ?? true,
+        marketing_emails: marketing_emails ?? false,
+        privacidad_nivel: privacidad_nivel ?? null,
+      },
+    });
+
+    res.status(200).json(preferencia);
+  } catch (error) {
+    console.error("Error al guardar preferencia por usuario:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+};

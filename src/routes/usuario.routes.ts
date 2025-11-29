@@ -6,12 +6,14 @@ import {
   obtenerUsuarioPorId,
   actualizarUsuario,
   eliminarUsuario,
+  exportarDatosUsuario,
 } from "../controllers/usuario.controller";
 
 const router = Router();
 
 //Usuario
 router.get("/", listarUsuarios);
+router.get("/:id/exportar", exportarDatosUsuario);
 router.get("/:id", obtenerUsuarioPorId);
 router.post("/", crearUsuario);
 router.put("/:id", actualizarUsuario);

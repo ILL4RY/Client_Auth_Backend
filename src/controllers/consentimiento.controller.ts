@@ -141,3 +141,103 @@ export const eliminarConsentimiento = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Error interno del servidor" });
   }
 };
+
+/* =========================================================
+   Guardar consentimientos de un usuario (upsert por consentimiento_id)
+   ========================================================= */
+export const guardarConsentimientosUsuario = async (req: Request, res: Response) => {
+  try {
+    const { usuarioId } = req.params;
+    const { consentimientos } = req.body as { consentimientos?: { consentimiento_id: number; aceptado: boolean }[] };
+
+    if (!consentimientos || !Array.isArray(consentimientos)) {
+      return res.status(400).json({ error: "Se requiere un arreglo de consentimientos" });
+    }
+
+    const usuario_id = Number(usuarioId);
+
+    const usuarioExiste = await prisma.usuario.findUnique({
+      where: { id: usuario_id },
+    });
+
+    if (!usuarioExiste) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    // Procesar secuencialmente para atrapar errores de FK y evitar conflictos
+    await prisma.$transaction(async (tx) => {
+      for (const item of consentimientos) {
+        // Verificar que el consentimiento exista
+        const cons = await tx.consentimiento.findUnique({
+          where: { id: item.consentimiento_id },
+        });
+        if (!cons) {
+          throw new Error(`Consentimiento ${item.consentimiento_id} no existe`);
+        }
+
+        // Buscar si ya existe el registro
+        const existente = await tx.usuarioConsentimiento.findUnique({
+          where: {
+            usuario_id_consentimiento_id: {
+              usuario_id,
+              consentimiento_id: item.consentimiento_id,
+            },
+          },
+        });
+
+        if (existente) {
+          await tx.usuarioConsentimiento.update({
+            where: { id: existente.id },
+            data: { aceptado: item.aceptado },
+          });
+        } else {
+          await tx.usuarioConsentimiento.create({
+            data: {
+              usuario_id,
+              consentimiento_id: item.consentimiento_id,
+              aceptado: item.aceptado,
+            },
+          });
+        }
+      }
+    });
+
+    const actuales = await prisma.usuarioConsentimiento.findMany({
+      where: { usuario_id },
+      include: { consentimiento: true },
+    });
+
+    res.status(200).json({ mensaje: "Consentimientos actualizados", consentimientos: actuales });
+  } catch (error) {
+    console.error("Error al guardar consentimientos de usuario:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+};
+
+/* =========================================================
+   Listar consentimientos de un usuario
+   ========================================================= */
+export const listarConsentimientosUsuario = async (req: Request, res: Response) => {
+  try {
+    const { usuarioId } = req.params;
+    const usuario_id = Number(usuarioId);
+
+    const usuarioExiste = await prisma.usuario.findUnique({
+      where: { id: usuario_id },
+    });
+
+    if (!usuarioExiste) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    const consentimientos = await prisma.usuarioConsentimiento.findMany({
+      where: { usuario_id },
+      include: { consentimiento: true },
+    });
+
+    res.status(200).json(consentimientos);
+  } catch (error) {
+    console.error("Error al listar consentimientos de usuario:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+};

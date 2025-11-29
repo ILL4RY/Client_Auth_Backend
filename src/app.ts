@@ -15,6 +15,7 @@ import permisoRoutes from "./routes/permiso.routes";
 import authRouter from "./routes/auth.routes";
 import direccionRoutes from "./routes/direccion.routes";
 import preferenciaRoutes from "./routes/preferencia.routes";
+import consentimientoRoutes from "./routes/consentimiento.routes";
 
 const app = express();
 const PgSession = connectPgSimple(session);
@@ -63,6 +64,7 @@ app.use("/api/roles", rolRoutes);
 app.use("/api/permisos", permisoRoutes);
 app.use("/api/direcciones", direccionRoutes);
 app.use("/api/preferencias", preferenciaRoutes);
+app.use("/api/consentimientos", consentimientoRoutes);
 
 
 // Ruta base
