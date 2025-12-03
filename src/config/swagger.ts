@@ -139,8 +139,10 @@ const swaggerOptions: Options = {
     }
 
   },
-  apis: ["./src/routes/*.ts"], // Rutas donde pondrás anotaciones
-
+  apis: [
+    "./src/routes/*.ts",   // para desarrollo
+    "./dist/routes/*.js",  // para producción
+  ],
 };
 
 const swaggerSpec = swaggerJSDoc(swaggerOptions);
