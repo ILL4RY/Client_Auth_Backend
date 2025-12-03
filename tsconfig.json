@@ -10,7 +10,10 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "target": "ES2021",
-    "types": [],
+
+    //"types": [],
+    "typeRoots": ["./node_modules/@types", "./src/types"],
+
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],

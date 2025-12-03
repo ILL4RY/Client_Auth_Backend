@@ -17,6 +17,9 @@ import direccionRoutes from "./routes/direccion.routes";
 import preferenciaRoutes from "./routes/preferencia.routes";
 import consentimientoRoutes from "./routes/consentimiento.routes";
 
+import swaggerSpecs from "./config/swagger";
+import swaggerUi from "swagger-ui-express";
+
 const app = express();
 const PgSession = connectPgSimple(session);
 
@@ -66,6 +69,8 @@ app.use("/api/direcciones", direccionRoutes);
 app.use("/api/preferencias", preferenciaRoutes);
 app.use("/api/consentimientos", consentimientoRoutes);
 
+// Ruta de documentación
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 // Ruta base
 app.get("/", (req, res) => {
