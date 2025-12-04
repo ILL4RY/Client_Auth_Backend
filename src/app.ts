@@ -20,6 +20,8 @@ import consentimientoRoutes from "./routes/consentimiento.routes";
 import swaggerSpecs from "./config/swagger";
 import swaggerUi from "swagger-ui-express";
 
+import path from "path";
+
 const app = express();
 const PgSession = connectPgSimple(session);
 
@@ -55,6 +57,12 @@ app.use(
       sameSite: "none"      // obligatorio para cross-site
     },
   })
+);
+
+// Servir carpeta uploads como pública
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "../uploads"))
 );
 
 // Rutas

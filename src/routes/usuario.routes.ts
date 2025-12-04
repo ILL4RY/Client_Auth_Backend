@@ -9,6 +9,8 @@ import {
   exportarDatosUsuario,
 } from "../controllers/usuario.controller";
 
+import uploadAvatar from "../middlewares/multerAvatar";
+
 const router = Router();
 
 /**
@@ -161,7 +163,11 @@ router.get("/", listarUsuarios);
 router.get("/:id/exportar", exportarDatosUsuario);
 router.get("/:id", obtenerUsuarioPorId);
 router.post("/", crearUsuario);
-router.put("/:id", actualizarUsuario);
+router.put(
+  "/:id",
+  uploadAvatar.single("avatar"), // ⬅ Multer procesa el archivo
+  actualizarUsuario
+);
 router.delete("/:id", eliminarUsuario);
 
 export default router;

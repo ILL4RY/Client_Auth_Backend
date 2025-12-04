@@ -2,6 +2,10 @@ import { Request, Response } from "express";
 import prisma from "../config/prisma";
 import { CrearUsuarioDTO } from "../interfaces/usuario.interface";
 import { hashPassword } from "../utils/hash";
+import { formatearUsuario } from "../utils/formatearUsuario";
+
+import fs from "fs";
+import path from "path";
 
 /* =========================================================
    Crear usuario
@@ -124,7 +128,8 @@ export const crearUsuario = async (
 
     const { contraseña: _, ...usuarioSinContraseña } = nuevoUsuario;
 
-    res.status(201).json(usuarioSinContraseña);
+    res.status(201).json(formatearUsuario(usuarioSinContraseña));
+
   } catch (error) {
     console.error("❌ Error al crear usuario:", error);
     res.status(500).json({ error: "Error interno del servidor" });
@@ -151,6 +156,7 @@ export const listarUsuarios = async (_req: Request, res: Response) => {
         avatar: true,
         genero: true,
         created_at: true,
+        updated_at:true,
 
         // 🔽 Incluimos los roles del usuario
         roles: {
@@ -174,7 +180,10 @@ export const listarUsuarios = async (_req: Request, res: Response) => {
       roles: usuario.roles.map((ur: any) => ur.rol),
     }));
 
-    res.status(200).json(usuariosConRoles);
+    res.status(200).json(
+      usuariosConRoles.map((usuario: any) => formatearUsuario(usuario))
+    );
+
   } catch (error) {
     console.error("Error al listar usuarios:", error);
     res.status(500).json({ error: "Error interno del servidor" });
@@ -204,6 +213,7 @@ export const obtenerUsuarioPorId = async (req: Request, res: Response) => {
         avatar: true,
         genero: true,
         created_at: true,
+        updated_at:true,
         preferencias: {
           select: {
             tema: true,
@@ -243,13 +253,7 @@ export const obtenerUsuarioPorId = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Usuario no encontrado" });
     }
 
-    const roles_usuario = usuario.roles.map((ur: any) => ur.rol);
-    const { roles, ...resto } = usuario;
-
-    res.status(200).json({
-      ...resto,
-      roles_usuario,
-    });
+    /*return */res.json(formatearUsuario(usuario));
   } catch (error) {
     console.error("❌ Error al obtener usuario:", error);
     res.status(500).json({ error: "Error interno del servidor" });
@@ -273,11 +277,10 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
       f_nacimiento,
       tipo_documento,
       nro_documento,
-      avatar,
       genero,
     } = req.body;
 
-    // Validar si el usuario existe antes de actualizar
+    // Verificar si existe usuario
     const usuarioExistente = await prisma.usuario.findUnique({
       where: { id: Number(id) },
     });
@@ -286,12 +289,39 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Usuario no encontrado" });
     }
 
-    // Si se incluye una nueva contraseña, se hashea
+    // ===============================
+    // Manejo de avatar (nuevo + borrar anterior)
+    // ===============================
+    let nuevoAvatar = usuarioExistente.avatar;
+
+    if (req.file) {
+      // Guardamos nuevo nombre de archivo
+      nuevoAvatar = req.file.filename;
+
+      // Si el usuario tenía un avatar anterior → eliminarlo
+      if (usuarioExistente.avatar) {
+        const rutaAnterior = path.join(
+          __dirname,
+          "../../uploads/avatars/",
+          usuarioExistente.avatar
+        );
+
+        if (fs.existsSync(rutaAnterior)) {
+          fs.unlinkSync(rutaAnterior);
+        }
+      }
+    }
+
+    // ===============================
+    // Manejo contraseña
+    // ===============================
     const contraseñaHasheada = contraseña
       ? await hashPassword(contraseña)
       : undefined;
 
-    // Actualizar solo campos válidos
+    // ===============================
+    // Actualizar usuario
+    // ===============================
     const usuarioActualizado = await prisma.usuario.update({
       where: { id: Number(id) },
       data: {
@@ -307,17 +337,15 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
           : usuarioExistente.f_nacimiento,
         tipo_documento: tipo_documento ?? usuarioExistente.tipo_documento,
         nro_documento: nro_documento ?? usuarioExistente.nro_documento,
-        avatar: avatar ?? usuarioExistente.avatar,
+        avatar: nuevoAvatar,
         genero: genero ?? usuarioExistente.genero,
       },
     });
 
-    const { contraseña: _, ...sinContraseña } = usuarioActualizado;
+    res.status(200).json(formatearUsuario(usuarioActualizado));
 
-    res.status(200).json(sinContraseña);
   } catch (error: any) {
     if (error.code === "P2002") {
-      // Prisma: campo único duplicado
       return res.status(409).json({ error: "El correo ya está registrado" });
     }
 
@@ -325,6 +353,7 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Error interno del servidor" });
   }
 };
+
 
 /* =========================================================
    Eliminar usuario
@@ -379,7 +408,7 @@ export const exportarDatosUsuario = async (req: Request, res: Response) => {
 
     res.status(200).json({
       exportado_en: new Date().toISOString(),
-      usuario: usuarioSinPassword,
+      usuario: formatearUsuario(usuarioSinPassword),
     });
   } catch (error) {
     console.error("Error al exportar datos de usuario:", error);
