@@ -38,6 +38,9 @@ app.use(cors({
   credentials: true
 }));
 
+
+const IN_PROD = process.env.NODE_ENV === "production";
+
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(useragent());
@@ -49,15 +52,16 @@ app.use(
     }),
     secret: process.env.SECRET_KEY!,
     resave: false,
-    saveUninitialized: false, //CAMBIOOOOO
+    saveUninitialized: false,
     cookie: {
       maxAge: 1000 * 60 * 60 * 24 * 365, // 1 año
-      secure: false, // cámbiar a true si se usa HTTPS
-      //sameSite: "lax",
-      sameSite: "none"      // obligatorio para cross-site
+      httpOnly: true,
+      secure: IN_PROD,                     // true solo en producción HTTPS
+      sameSite: IN_PROD ? "none" : "lax", // cross-site en prod, lax en local
     },
   })
 );
+
 
 // Servir carpeta uploads como pública
 app.use(
