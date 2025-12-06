@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 import { sendPasswordResetEmail } from "../utils/email";
 import { generateResetToken, getResetExpiration } from "../utils/resetToken";
+import { formatearUsuario } from "../utils/formatearUsuario";
 
 const prisma = new PrismaClient();
 
@@ -143,6 +144,11 @@ export const login = async (req: Request, res: Response) => {
         });
       }
 
+      // Obtener la URL del avatar
+      const avatar_url = user.avatar
+        ? `${process.env.BASE_URL}/uploads/avatars/${user.avatar}`
+        : "";
+
       const dispositivoData: any = {
         usuario_id: user.id,
         tipo: (req as any).useragent?.isMobile ? "móvil" : "desktop",
@@ -158,7 +164,10 @@ export const login = async (req: Request, res: Response) => {
 
       return res.status(200).json({
         success: true,
-        user: userWithoutPassword,
+        user: {
+          ...userWithoutPassword,
+          avatar_url: avatar_url, // Incluir el avatar_url en la respuesta
+        },
         message: "Inicio de sesión exitoso",
       });
     });
@@ -248,20 +257,38 @@ export const getCurrentUser = async (req: Request, res: Response) => {
         nro_documento: true,
         avatar: true,
         genero: true,
-        activo: true,
         created_at: true,
         updated_at: true,
+        preferencias: {
+          select: {
+            tema: true,
+            idioma: true,
+            notificaciones_on: true,
+            marketing_emails: true,
+            privacidad_nivel: true,
+          },
+        },
         roles: {
-          include: {
+          select: {
             rol: {
-              include: {
-                permisos: {
-                  include: {
-                    permiso: true,
-                  },
-                },
+              select: {
+                id: true,
+                nombre: true,
+                descripcion: true,
               },
             },
+          },
+        },
+        // 🔹 Incluir las direcciones
+        direcciones: {
+          select: {
+            id: true,
+            calle: true,
+            ciudad: true,
+            estado: true,
+            pais: true,
+            codigo_postal: true,
+            isDefault: true,
           },
         },
       },
@@ -274,10 +301,19 @@ export const getCurrentUser = async (req: Request, res: Response) => {
       });
     }
 
+    // Construir la URL completa del avatar
+    const avatar_url = user.avatar
+      ? `${process.env.BASE_URL}/uploads/avatars/${user.avatar}`
+      : "";
+
     res.status(200).json({
       success: true,
-      user,
+      user: {
+        ...user,
+        avatar_url: avatar_url, // Añadir la URL del avatar a la respuesta
+      },
     });
+
   } catch (error) {
     console.error("Error al obtener usuario actual:", error);
     res.status(500).json({
