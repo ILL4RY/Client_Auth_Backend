@@ -340,7 +340,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
     });
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-    const resetUrl = `${frontendUrl}/reset?token=${token}`;
+    const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
     await sendPasswordResetEmail({
       to: user.correo,
