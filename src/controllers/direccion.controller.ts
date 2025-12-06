@@ -44,6 +44,17 @@ export const crearDireccion = async (
       return res.status(404).json({ error: "Usuario no encontrado" });
     }
 
+    // Límite de direcciones por usuario: máximo 3
+    const direccionesCount = await prisma.direccion.count({
+      where: { usuario_id: Number(usuario_id) },
+    });
+
+    if (direccionesCount >= 3) {
+      return res
+        .status(400)
+        .json({ error: "Solo se permite un máximo de 3 direcciones registradas" });
+    }
+
     // Transacción para garantizar consistencia de direcciones default
     const nuevaDireccion = await prisma.$transaction(async (tx) => {
       // Si será default → desactivar las demás
@@ -123,12 +134,18 @@ export const actualizarDireccion = async (req: Request, res: Response) => {
     const usuario_id = direccionExistente.usuario_id;
 
     const direccionActualizada = await prisma.$transaction(async (tx) => {
-      // Si se marcará como default → limpiar las demás
-      if (data.isDefault) {
-        await tx.direccion.updateMany({
-          where: { usuario_id },
-          data: { isDefault: false },
+      // Si en el body viene explícitamente isDefault === true → desactivar la otra dirección default (si existe)
+      if (data.isDefault === true) {
+        const otraDefault = await tx.direccion.findFirst({
+          where: { usuario_id, isDefault: true, NOT: { id: Number(id) } },
         });
+
+        if (otraDefault) {
+          await tx.direccion.update({
+            where: { id: otraDefault.id },
+            data: { isDefault: false },
+          });
+        }
       }
 
       // Evitamos permitir isDefault: false desde cliente
