@@ -25,9 +25,17 @@ export const register = async (req: Request, res: Response) => {
       contraseña,
       tipo_documento,
       nro_documento,
+      rolInt,
     } = req.body as any;
 
-    if (!nombres || !apellido_p || !correo || !contraseña || !tipo_documento || !nro_documento) {
+    if (
+      !nombres ||
+      !apellido_p ||
+      !correo ||
+      !contraseña ||
+      !tipo_documento ||
+      !nro_documento
+    ) {
       return res.status(400).json({
         success: false,
         message: "Todos los campos son obligatorios",
@@ -48,17 +56,24 @@ export const register = async (req: Request, res: Response) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(contraseña, salt);
 
+    const userData: any = {
+      nombres,
+      apellido_p,
+      apellido_m,
+      correo,
+      contraseña: hashedPassword,
+      tipo_documento,
+      nro_documento,
+      activo: true,
+    };
+
+    // Si viene rolInt, lo asignamos; si no, no lo tocamos
+    if (rolInt !== undefined && rolInt !== null && rolInt !== "") {
+      userData.rolInt = Number(rolInt);
+    }
+
     const newUser = await prisma.usuario.create({
-      data: {
-        nombres,
-        apellido_p,
-        apellido_m,
-        correo,
-        contraseña: hashedPassword,
-        tipo_documento,
-        nro_documento,
-        activo: true,
-      },
+      data: userData
     });
 
     // Asignar rol por defecto (cliente id 2) si existe
@@ -85,8 +100,13 @@ export const register = async (req: Request, res: Response) => {
     });
   } catch (error: unknown) {
     console.error("Error en registro:", error);
-    const errorMessage = error instanceof Error ? error.message : "Error desconocido";
-    const statusCode = errorMessage.includes("rol de usuario no está configurado") ? 500 : 400;
+    const errorMessage =
+      error instanceof Error ? error.message : "Error desconocido";
+    const statusCode = errorMessage.includes(
+      "rol de usuario no está configurado"
+    )
+      ? 500
+      : 400;
 
     return res.status(statusCode).json({
       success: false,
@@ -313,7 +333,6 @@ export const getCurrentUser = async (req: Request, res: Response) => {
         avatar_url: avatar_url, // Añadir la URL del avatar a la respuesta
       },
     });
-
   } catch (error) {
     console.error("Error al obtener usuario actual:", error);
     res.status(500).json({
@@ -335,7 +354,8 @@ export const forgotPassword = async (req: Request, res: Response) => {
     });
   }
 
-  const genericMessage = "Si el correo es válido, enviaremos un enlace de recuperación.";
+  const genericMessage =
+    "Si el correo es válido, enviaremos un enlace de recuperación.";
 
   try {
     const user = await prisma.usuario.findUnique({
