@@ -279,6 +279,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
         genero: true,
         created_at: true,
         updated_at: true,
+        rolInt: true,
         preferencias: {
           select: {
             tema: true,
